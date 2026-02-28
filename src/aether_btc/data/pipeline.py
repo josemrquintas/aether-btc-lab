@@ -8,7 +8,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from aether_btc.data.binance_client import BinanceDataClient
-from aether_btc.data.database import Candle15m, FundingRate, get_session
+from aether_btc.data.database import Candle15m, FundingRate, get_engine, get_session
 
 log = structlog.get_logger()
 
@@ -18,6 +18,7 @@ class DataPipeline:
 
     def __init__(self, session: Session | None = None, binance_client: BinanceDataClient | None = None) -> None:
         self.session = session or get_session()
+        self.engine = self.session.bind
         self.binance = binance_client or BinanceDataClient()
 
     def fetch_and_store_candles(
@@ -32,27 +33,27 @@ class DataPipeline:
         if df.empty:
             return 0
 
+        df["pair"] = pair
+        batch_size = 10000
         stored = 0
-        batch_size = 5000
 
         for i in range(0, len(df), batch_size):
             batch = df.iloc[i:i + batch_size]
-            for _, row in batch.iterrows():
-                candle = Candle15m(
-                    pair=pair,
-                    timestamp=row["timestamp"],
-                    open=row["open"],
-                    high=row["high"],
-                    low=row["low"],
-                    close=row["close"],
-                    volume=row["volume"],
-                    quote_volume=row["quote_volume"],
-                    trades_count=row["trades_count"],
-                )
-                self.session.merge(candle)
-                stored += 1
+            records = batch[["pair", "timestamp", "open", "high", "low", "close",
+                             "volume", "quote_volume", "trades_count"]].to_dict("records")
 
-            self.session.commit()
+            with self.engine.connect() as conn:
+                conn.execute(
+                    text("""
+                        INSERT INTO candles_15m (pair, timestamp, open, high, low, close, volume, quote_volume, trades_count)
+                        VALUES (:pair, :timestamp, :open, :high, :low, :close, :volume, :quote_volume, :trades_count)
+                        ON CONFLICT (pair, timestamp) DO NOTHING
+                    """),
+                    records,
+                )
+                conn.commit()
+
+            stored += len(records)
             log.info("batch_stored", pair=pair, count=stored, total=len(df))
 
         log.info("candles_stored", pair=pair, total=stored)
@@ -69,19 +70,22 @@ class DataPipeline:
         if df.empty:
             return 0
 
-        stored = 0
-        for _, row in df.iterrows():
-            rate = FundingRate(
-                pair=pair,
-                timestamp=row["timestamp"],
-                funding_rate=row["funding_rate"],
-            )
-            self.session.merge(rate)
-            stored += 1
+        df["pair"] = pair
+        records = df[["pair", "timestamp", "funding_rate"]].to_dict("records")
 
-        self.session.commit()
-        log.info("funding_rates_stored", pair=pair, total=stored)
-        return stored
+        with self.engine.connect() as conn:
+            conn.execute(
+                text("""
+                    INSERT INTO funding_rates (pair, timestamp, funding_rate)
+                    VALUES (:pair, :timestamp, :funding_rate)
+                    ON CONFLICT (pair, timestamp) DO NOTHING
+                """),
+                records,
+            )
+            conn.commit()
+
+        log.info("funding_rates_stored", pair=pair, total=len(records))
+        return len(records)
 
     def load_candles(
         self,
