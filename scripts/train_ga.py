@@ -19,6 +19,7 @@ from aether_btc.data.pipeline import DataPipeline
 from aether_btc.ga.chromosome import Chromosome
 from aether_btc.ga.engine import GAConfig, GAEngine, GenerationStats
 from aether_btc.ga.fitness import FitnessResult, evaluate_chromosome
+from aether_btc.signals import STRATEGIES, StrategyRunner
 from aether_btc.signals.indicators import Indicators
 
 load_dotenv()
@@ -50,6 +51,11 @@ def main() -> None:
     # Compute indicators
     log.info("computing_indicators")
     candles = Indicators.add_all(candles, funding_rates=funding)
+
+    # Precompute strategy signals
+    log.info("precomputing_strategies")
+    runner = StrategyRunner(STRATEGIES)
+    candles = runner.precompute_all_bars(candles)
 
     # Setup fitness function (closure over data)
     backtest_config = BacktestConfig()

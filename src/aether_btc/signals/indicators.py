@@ -369,12 +369,17 @@ class Indicators:
         df["kc_upper"] = kc["kc_upper"]
         df["kc_middle"] = kc["kc_middle"]
         df["kc_lower"] = kc["kc_lower"]
+        dc = cls.donchian_channel(df["high"], df["low"], df["close"])
+        df["dc_upper"] = dc["dc_upper"]
+        df["dc_middle"] = dc["dc_middle"]
+        df["dc_lower"] = dc["dc_lower"]
         return df
 
     @classmethod
     def add_volume(cls, df: pd.DataFrame) -> pd.DataFrame:
         df = df.copy()
         df["obv"] = cls.obv(df["close"], df["volume"])
+        df["obv_slope"] = df["obv"].diff(4)
         df["cmf"] = cls.cmf(df["high"], df["low"], df["close"], df["volume"])
         df["mfi"] = cls.mfi(df["high"], df["low"], df["close"], df["volume"])
         df["volume_sma"] = cls.volume_sma(df["volume"])

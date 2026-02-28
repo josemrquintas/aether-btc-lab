@@ -51,11 +51,18 @@ src/aether_btc/
 │   ├── binance_client.py    # Binance API wrapper (klines, funding rates)
 │   └── pipeline.py          # Fetch → store → load orchestration
 │
-├── signals/                 # Feature engineering
-│   └── indicators.py        # 40+ technical indicators (trend, momentum, volatility, volume)
+├── signals/                 # Feature engineering + signal strategies
+│   ├── indicators.py        # 40+ technical indicators (trend, momentum, volatility, volume)
+│   ├── base.py              # SignalStrategy ABC + StrategySignal dataclass
+│   ├── momentum.py          # MomentumStrategy (RSI, MACD, Stochastic, ROC, CCI)
+│   ├── mean_reversion.py    # MeanReversionStrategy (BB, Z-score, RSI extremes)
+│   ├── trend_following.py   # TrendFollowingStrategy (EMA cross, SMA200, Supertrend, ADX gate)
+│   ├── volatility_breakout.py # VolatilityBreakoutStrategy (Keltner, Donchian, BB squeeze)
+│   ├── funding_volume.py    # FundingVolumeStrategy (funding contrarian, volume, OBV, MFI, CMF)
+│   └── runner.py            # StrategyRunner — precomputes all strategy signals
 │
 ├── ga/                      # Genetic algorithm
-│   ├── chromosome.py        # 37-gene specification (leverage, allocation, feature weights)
+│   ├── chromosome.py        # 52-gene specification (leverage, allocation, feature weights, strategy weights)
 │   ├── fitness.py           # Signal scoring, fitness evaluation
 │   └── engine.py            # Population evolution (selection, crossover, mutation)
 │
@@ -88,6 +95,10 @@ src/aether_btc/
 2. Compute Indicators
    Raw candles → Indicators.add_all() → 40+ features per bar
 
+2b. Precompute Strategy Signals
+   Indicators → StrategyRunner.precompute_all_bars() → 14 strategy feature columns
+   (5 strategies × 2 columns each + 4 aggregate columns)
+
 3. GA Evolution
    Population of 80 chromosomes
    → Evaluate each via backtest on training window
@@ -106,13 +117,14 @@ src/aether_btc/
 ```
 1. Fetch latest 15min candle from Binance
 2. Compute indicators on rolling window
-3. Apply trained chromosome → signal score (sigmoid)
-4. If score > cutoff → BUY signal; if score < 1-cutoff → SHORT signal
-5. Risk manager: calculate leverage, position size, stop levels
-6. Portfolio manager: check margin, max positions, circuit breaker
-7. Execute order on Binance Futures (next candle open)
-8. Set SL/TP orders
-9. Send Telegram alert
+3. Compute strategy signals (momentum, mean reversion, trend, volatility, funding/volume)
+4. Apply trained chromosome → signal score (sigmoid over 40 features)
+5. If score > cutoff → BUY signal; if score < 1-cutoff → SHORT signal
+6. Risk manager: calculate leverage, position size, stop levels
+7. Portfolio manager: check margin, max positions, circuit breaker
+8. Execute order on Binance Futures (next candle open)
+9. Set SL/TP orders
+10. Send Telegram alert
 ```
 
 ## Backtest Engine — 9-Step Bar Loop

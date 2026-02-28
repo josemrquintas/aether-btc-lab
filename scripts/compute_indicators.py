@@ -11,6 +11,7 @@ import structlog
 from dotenv import load_dotenv
 
 from aether_btc.data.pipeline import DataPipeline
+from aether_btc.signals import STRATEGIES, StrategyRunner
 from aether_btc.signals.indicators import Indicators
 
 load_dotenv()
@@ -38,6 +39,10 @@ def main() -> None:
 
     log.info("computing_indicators")
     candles = Indicators.add_all(candles, funding_rates=funding)
+
+    log.info("precomputing_strategies")
+    runner = StrategyRunner(STRATEGIES)
+    candles = runner.precompute_all_bars(candles)
 
     # Check for NaN after warmup
     warmup = 200

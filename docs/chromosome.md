@@ -80,13 +80,41 @@ Where `sigmoid(x) = 1 / (1 + exp(-x))`. Score > cutoff → BUY, score < (1 - cut
 | `fw_funding_rate` | -2.0 | 2.0 | 0.0 | `funding_rate` |
 | `fw_quote_vol_ratio` | -2.0 | 2.0 | 0.0 | `quote_volume_ratio` |
 
+### Strategy Signal Genes (14 genes) — NEW
+
+The GA learns to weight precomputed strategy signals alongside raw features. Each strategy produces a presence value (-1/0/1) and confidence (0-1). All default to 0 for backward compatibility.
+
+**Per-strategy weights (10 genes):**
+
+| Gene | Min | Max | Default | Feature Column |
+|------|-----|-----|---------|----------------|
+| `fw_sig_momentum` | -1.5 | 1.5 | 0.0 | `sig_momentum` |
+| `fw_sig_momentum_conf` | -1.5 | 1.5 | 0.0 | `sig_momentum_conf` |
+| `fw_sig_mean_reversion` | -1.5 | 1.5 | 0.0 | `sig_mean_reversion` |
+| `fw_sig_mean_reversion_conf` | -1.5 | 1.5 | 0.0 | `sig_mean_reversion_conf` |
+| `fw_sig_trend_following` | -1.5 | 1.5 | 0.0 | `sig_trend_following` |
+| `fw_sig_trend_following_conf` | -1.5 | 1.5 | 0.0 | `sig_trend_following_conf` |
+| `fw_sig_volatility_breakout` | -1.5 | 1.5 | 0.0 | `sig_volatility_breakout` |
+| `fw_sig_volatility_breakout_conf` | -1.5 | 1.5 | 0.0 | `sig_volatility_breakout_conf` |
+| `fw_sig_funding_volume` | -1.5 | 1.5 | 0.0 | `sig_funding_volume` |
+| `fw_sig_funding_volume_conf` | -1.5 | 1.5 | 0.0 | `sig_funding_volume_conf` |
+
+**Aggregate strategy features (4 genes):**
+
+| Gene | Min | Max | Default | Feature Column |
+|------|-----|-----|---------|----------------|
+| `fw_n_buy_signals` | -1.5 | 1.5 | 0.0 | `n_buy_signals` |
+| `fw_n_sell_signals` | -1.5 | 1.5 | 0.0 | `n_sell_signals` |
+| `fw_signal_consensus` | -1.5 | 1.5 | 0.0 | `signal_consensus` |
+| `fw_max_confidence` | -1.5 | 1.5 | 0.0 | `max_confidence` |
+
 ### Bias Gene (1 gene)
 
 | Gene | Min | Max | Default | Description |
 |------|-----|-----|---------|-------------|
 | `fw_bias` | -5.0 | 5.0 | 0.0 | Constant offset in signal scoring (positive = bullish bias) |
 
-## Total: 37 Genes
+## Total: 52 Genes
 
 ## GA Operators
 

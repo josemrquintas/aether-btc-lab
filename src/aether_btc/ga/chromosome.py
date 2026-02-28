@@ -80,6 +80,23 @@ GENE_SPECS = [
     # Crypto-specific features (2)
     GeneSpec("fw_funding_rate", -1.5, 1.5, 0.0, "float", "Weight: funding rate"),
     GeneSpec("fw_quote_volume_ratio", -1.5, 1.5, 0.0, "float", "Weight: quote volume ratio"),
+    # === STRATEGY SIGNAL GENES (14 new) ===
+    # Per-strategy weights (10): presence + confidence for each of 5 strategies
+    GeneSpec("fw_sig_momentum", -1.5, 1.5, 0.0, "float", "Weight: momentum signal"),
+    GeneSpec("fw_sig_momentum_conf", -1.5, 1.5, 0.0, "float", "Weight: momentum confidence"),
+    GeneSpec("fw_sig_mean_reversion", -1.5, 1.5, 0.0, "float", "Weight: mean reversion signal"),
+    GeneSpec("fw_sig_mean_reversion_conf", -1.5, 1.5, 0.0, "float", "Weight: mean reversion confidence"),
+    GeneSpec("fw_sig_trend_following", -1.5, 1.5, 0.0, "float", "Weight: trend following signal"),
+    GeneSpec("fw_sig_trend_following_conf", -1.5, 1.5, 0.0, "float", "Weight: trend following confidence"),
+    GeneSpec("fw_sig_volatility_breakout", -1.5, 1.5, 0.0, "float", "Weight: volatility breakout signal"),
+    GeneSpec("fw_sig_volatility_breakout_conf", -1.5, 1.5, 0.0, "float", "Weight: volatility breakout confidence"),
+    GeneSpec("fw_sig_funding_volume", -1.5, 1.5, 0.0, "float", "Weight: funding/volume signal"),
+    GeneSpec("fw_sig_funding_volume_conf", -1.5, 1.5, 0.0, "float", "Weight: funding/volume confidence"),
+    # Aggregate strategy features (4)
+    GeneSpec("fw_n_buy_signals", -1.5, 1.5, 0.0, "float", "Weight: count of buy signals"),
+    GeneSpec("fw_n_sell_signals", -1.5, 1.5, 0.0, "float", "Weight: count of sell signals"),
+    GeneSpec("fw_signal_consensus", -1.5, 1.5, 0.0, "float", "Weight: net signal consensus"),
+    GeneSpec("fw_max_confidence", -1.5, 1.5, 0.0, "float", "Weight: max strategy confidence"),
     # Bias term
     GeneSpec("fw_bias", -5.0, 5.0, 0.0, "float", "Scoring bias term"),
 ]
@@ -117,6 +134,21 @@ FEATURE_COLUMN_MAP = {
     "fw_cci": "cci",
     "fw_funding_rate": "funding_rate",
     "fw_quote_volume_ratio": "quote_volume_ratio",
+    # Strategy signal features (14)
+    "fw_sig_momentum": "sig_momentum",
+    "fw_sig_momentum_conf": "sig_momentum_conf",
+    "fw_sig_mean_reversion": "sig_mean_reversion",
+    "fw_sig_mean_reversion_conf": "sig_mean_reversion_conf",
+    "fw_sig_trend_following": "sig_trend_following",
+    "fw_sig_trend_following_conf": "sig_trend_following_conf",
+    "fw_sig_volatility_breakout": "sig_volatility_breakout",
+    "fw_sig_volatility_breakout_conf": "sig_volatility_breakout_conf",
+    "fw_sig_funding_volume": "sig_funding_volume",
+    "fw_sig_funding_volume_conf": "sig_funding_volume_conf",
+    "fw_n_buy_signals": "n_buy_signals",
+    "fw_n_sell_signals": "n_sell_signals",
+    "fw_signal_consensus": "signal_consensus",
+    "fw_max_confidence": "max_confidence",
 }
 
 

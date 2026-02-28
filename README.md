@@ -8,7 +8,8 @@ Aether BTC uses a **genetic algorithm** to evolve trading signal weights, levera
 
 ### Key Features
 
-- **GA-Evolved Signals**: 26 technical indicator weights + bias evolved via genetic algorithm
+- **GA-Evolved Signals**: 40 feature weights (26 raw indicators + 14 strategy signals) + bias evolved via genetic algorithm
+- **5 Signal Strategies**: Momentum, Mean Reversion, Trend Following, Volatility Breakout, Funding/Volume — each encodes domain knowledge and produces signals with confidence scores
 - **Dynamic Leverage**: 1x-20x leverage per trade, optimized by GA based on confidence and volatility
 - **Full Cost Simulation**: Commission (0.04%), slippage, and funding rate costs
 - **Liquidation Modeling**: Accurate liquidation price calculation with configurable safety buffer
@@ -49,8 +50,8 @@ python scripts/run_backtest.py --chromosome models/best_chromosome.json
 ```
 src/aether_btc/
   core/           → Enums, models, config
-  signals/        → 40+ technical indicators
-  ga/             → Genetic algorithm (chromosome, fitness, engine)
+  signals/        → 40+ technical indicators + 5 signal strategies
+  ga/             → Genetic algorithm (52-gene chromosome, fitness, engine)
   backtest/       → 15min bar simulation with leverage + liquidation
   risk/           → Position sizing, leverage calc, circuit breaker
   portfolio/      → Isolated margin position management
@@ -75,7 +76,8 @@ See [docs/architecture.md](docs/architecture.md) for the full system design.
 ## Documentation
 
 - [Architecture](docs/architecture.md) — System design and data flow
-- [Chromosome](docs/chromosome.md) — 37-gene specification and GA operators
+- [Chromosome](docs/chromosome.md) — 52-gene specification and GA operators
+- [Strategies](docs/strategies.md) — 5 signal strategies architecture and details
 - [Backtest Guide](docs/backtest-guide.md) — Running and interpreting backtests
 - [Data Pipeline](docs/data-pipeline.md) — Fetching data and computing indicators
 - [Deployment](docs/deployment.md) — VPS setup and live trading

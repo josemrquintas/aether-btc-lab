@@ -101,3 +101,39 @@ class TestCryptoGenes:
         c = Chromosome.from_defaults()
         gene_names = {spec.name for spec in GENE_SPECS}
         assert set(c.genes.keys()) == gene_names
+
+
+class TestStrategyGenes:
+    """Test strategy signal genes are present and correct."""
+
+    STRATEGY_GENES = [
+        "fw_sig_momentum", "fw_sig_momentum_conf",
+        "fw_sig_mean_reversion", "fw_sig_mean_reversion_conf",
+        "fw_sig_trend_following", "fw_sig_trend_following_conf",
+        "fw_sig_volatility_breakout", "fw_sig_volatility_breakout_conf",
+        "fw_sig_funding_volume", "fw_sig_funding_volume_conf",
+        "fw_n_buy_signals", "fw_n_sell_signals",
+        "fw_signal_consensus", "fw_max_confidence",
+    ]
+
+    def test_strategy_genes_present(self):
+        """Chromosome has all 14 strategy signal genes."""
+        c = Chromosome.from_defaults()
+        for gene in self.STRATEGY_GENES:
+            assert gene in c.genes, f"Missing gene: {gene}"
+
+    def test_strategy_genes_default_zero(self):
+        """Strategy genes default to 0 (backward compatible)."""
+        c = Chromosome.from_defaults()
+        for gene in self.STRATEGY_GENES:
+            assert c.get(gene) == 0.0
+
+    def test_total_gene_count(self):
+        """Chromosome should have 52 genes total (38 original + 14 strategy)."""
+        assert len(GENE_SPECS) == 52
+
+    def test_feature_column_map_has_strategy_entries(self):
+        """FEATURE_COLUMN_MAP includes strategy signal columns."""
+        from aether_btc.ga.chromosome import FEATURE_COLUMN_MAP
+        for gene in self.STRATEGY_GENES:
+            assert gene in FEATURE_COLUMN_MAP, f"Missing from FEATURE_COLUMN_MAP: {gene}"

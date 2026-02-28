@@ -3,8 +3,8 @@
 ## Project Structure
 src/aether_btc/          -> Core Python package
   core/                  -> Enums, models, config
-  signals/               -> Indicator computation + signal strategies for 15min crypto
-  ga/                    -> GA engine + crypto chromosome (leverage gene, funding rate awareness)
+  signals/               -> Indicators + 5 signal strategies (momentum, mean reversion, trend, volatility, funding/volume)
+  ga/                    -> GA engine + 52-gene chromosome (leverage, features, strategy weights)
   backtest/              -> 15min bar simulation with leverage, liquidation, funding rates
   risk/                  -> Crypto risk manager (liquidation buffer, max leverage, position sizing)
   data/                  -> Binance historical data fetcher + storage
@@ -32,8 +32,9 @@ docs/                    -> Architecture, chromosome, backtest guide, data pipel
 ## Architecture: GA-Evolved Crypto Daytrader
 - Single pair: BTC/USDT on Binance Futures
 - Timeframe: 15-minute candles (96 per day, 24/7)
-- GA evolves feature weights + leverage genes + allocation genes
-- Signal scoring: sigmoid(dot(features, weights) + bias)
+- GA evolves feature weights (26 raw + 14 strategy) + leverage genes + allocation genes
+- 5 signal strategies precomputed before GA: Momentum, MeanReversion, TrendFollowing, VolatilityBreakout, FundingVolume
+- Signal scoring: sigmoid(dot(40 features, 40 weights) + bias)
 - Leverage: 1x-20x, GA-optimized per trade based on confidence + volatility
 
 ## GA Fitness (Sharpe + Calmar)

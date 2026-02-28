@@ -48,6 +48,21 @@ def make_test_candles(n: int = 300) -> pd.DataFrame:
         "cci": np.random.randn(n) * 100,
         "funding_rate": np.random.normal(0.0001, 0.0003, n),
         "quote_volume_ratio": np.random.uniform(0.5, 3.0, n),
+        # Strategy signal columns
+        "sig_momentum": np.random.choice([-1.0, 0.0, 1.0], n),
+        "sig_momentum_conf": np.random.uniform(0, 1, n),
+        "sig_mean_reversion": np.random.choice([-1.0, 0.0, 1.0], n),
+        "sig_mean_reversion_conf": np.random.uniform(0, 1, n),
+        "sig_trend_following": np.random.choice([-1.0, 0.0, 1.0], n),
+        "sig_trend_following_conf": np.random.uniform(0, 1, n),
+        "sig_volatility_breakout": np.random.choice([-1.0, 0.0, 1.0], n),
+        "sig_volatility_breakout_conf": np.random.uniform(0, 1, n),
+        "sig_funding_volume": np.random.choice([-1.0, 0.0, 1.0], n),
+        "sig_funding_volume_conf": np.random.uniform(0, 1, n),
+        "n_buy_signals": np.random.randint(0, 6, n).astype(float),
+        "n_sell_signals": np.random.randint(0, 6, n).astype(float),
+        "signal_consensus": np.random.uniform(-5, 5, n),
+        "max_confidence": np.random.uniform(0, 1, n),
     }, index=timestamps)
     return df
 
