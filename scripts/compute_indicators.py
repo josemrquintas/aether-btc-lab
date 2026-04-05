@@ -21,12 +21,13 @@ log = structlog.get_logger()
 def main() -> None:
     parser = argparse.ArgumentParser(description="Compute indicators on historical data")
     parser.add_argument("--pair", default="BTCUSDT", help="Trading pair")
+    parser.add_argument("--interval", default="15m", help="Candle interval (15m, 1h, 4h, 1d)")
     args = parser.parse_args()
 
     pipeline = DataPipeline()
 
-    log.info("loading_candles", pair=args.pair)
-    candles = pipeline.load_candles(pair=args.pair)
+    log.info("loading_candles", pair=args.pair, interval=args.interval)
+    candles = pipeline.load_candles(pair=args.pair, interval=args.interval)
     if candles.empty:
         log.error("no_candles_found", pair=args.pair)
         return

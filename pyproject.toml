@@ -25,6 +25,9 @@ dependencies = [
     "apscheduler>=3.10.0",
     # Alerts
     "python-telegram-bot>=21.0",
+    # Dashboard
+    "dash>=2.0.0",
+    "plotly>=5.0.0",
     # Utilities
     "tenacity>=8.2.0",
     "tqdm>=4.66.0",

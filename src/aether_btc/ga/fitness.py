@@ -184,22 +184,26 @@ def evaluate_chromosome(
 
     # Penalties
     if result.total_trades == 0:
-        fitness = 0.0
+        # Harsh but not zero — still distinguishable from "traded but lost"
+        fitness = -2.0
     elif result.total_trades < 10:
-        fitness *= 0.5  # Penalize too few trades
+        fitness *= 0.5  # Hard penalty for very few trades
 
     if result.liquidations > 0:
         fitness -= result.liquidations * 0.5  # Heavy penalty for liquidations
+
+    # Max drawdown penalty — soft penalty above 40% DD (only applied to positive fitness)
+    if fitness > 0 and result.max_drawdown > 0.40:
+        dd_excess = result.max_drawdown - 0.40
+        fitness *= max(0.3, 1.0 - dd_excess)  # 60% DD -> 0.8x, 80% DD -> 0.6x
 
     # L2 regularization on feature weights
     l2_penalty = 0.0
     for name in FEATURE_WEIGHT_NAMES:
         w = chromosome.get(name)
         l2_penalty += w * w
-    l2_penalty *= 0.01
+    l2_penalty *= 0.001
     fitness -= l2_penalty
-
-    fitness = max(0.0, fitness)
 
     return FitnessResult(
         fitness=fitness,

@@ -8,7 +8,13 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from aether_btc.data.binance_client import BinanceDataClient
-from aether_btc.data.database import Candle15m, FundingRate, get_engine, get_session
+from aether_btc.data.database import (
+    CANDLE_MODELS,
+    FundingRate,
+    _candle_table_name,
+    get_engine,
+    get_session,
+)
 
 log = structlog.get_logger()
 
@@ -29,6 +35,7 @@ class DataPipeline:
         end: str | None = None,
     ) -> int:
         """Fetch candles from Binance and store in database. Returns count stored."""
+        table = _candle_table_name(interval)
         df = self.binance.fetch_klines(pair=pair, interval=interval, start=start, end=end)
         if df.empty:
             return 0
@@ -44,8 +51,8 @@ class DataPipeline:
 
             with self.engine.connect() as conn:
                 conn.execute(
-                    text("""
-                        INSERT INTO candles_15m (pair, timestamp, open, high, low, close, volume, quote_volume, trades_count)
+                    text(f"""
+                        INSERT INTO {table} (pair, timestamp, open, high, low, close, volume, quote_volume, trades_count)
                         VALUES (:pair, :timestamp, :open, :high, :low, :close, :volume, :quote_volume, :trades_count)
                         ON CONFLICT (pair, timestamp) DO NOTHING
                     """),
@@ -54,9 +61,9 @@ class DataPipeline:
                 conn.commit()
 
             stored += len(records)
-            log.info("batch_stored", pair=pair, count=stored, total=len(df))
+            log.info("batch_stored", pair=pair, interval=interval, count=stored, total=len(df))
 
-        log.info("candles_stored", pair=pair, total=stored)
+        log.info("candles_stored", pair=pair, interval=interval, total=stored)
         return stored
 
     def fetch_and_store_funding_rates(
@@ -90,16 +97,18 @@ class DataPipeline:
     def load_candles(
         self,
         pair: str = "BTCUSDT",
+        interval: str = "15m",
         start: datetime | None = None,
         end: datetime | None = None,
     ) -> pd.DataFrame:
         """Load candles from database as DataFrame."""
-        query = self.session.query(Candle15m).filter(Candle15m.pair == pair)
+        model = CANDLE_MODELS[interval]
+        query = self.session.query(model).filter(model.pair == pair)
         if start:
-            query = query.filter(Candle15m.timestamp >= start)
+            query = query.filter(model.timestamp >= start)
         if end:
-            query = query.filter(Candle15m.timestamp <= end)
-        query = query.order_by(Candle15m.timestamp)
+            query = query.filter(model.timestamp <= end)
+        query = query.order_by(model.timestamp)
 
         rows = query.all()
         if not rows:
@@ -143,9 +152,10 @@ class DataPipeline:
         df.set_index("timestamp", inplace=True)
         return df
 
-    def get_candle_count(self, pair: str = "BTCUSDT") -> int:
+    def get_candle_count(self, pair: str = "BTCUSDT", interval: str = "15m") -> int:
         """Get total candle count for a pair."""
-        return self.session.query(Candle15m).filter(Candle15m.pair == pair).count()
+        model = CANDLE_MODELS[interval]
+        return self.session.query(model).filter(model.pair == pair).count()
 
     def get_funding_rate_count(self, pair: str = "BTCUSDT") -> int:
         """Get total funding rate count for a pair."""

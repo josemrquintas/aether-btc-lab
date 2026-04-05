@@ -22,25 +22,128 @@ class Base(DeclarativeBase):
     pass
 
 
-class Candle15m(Base):
-    """15-minute OHLCV candle data."""
+# ---------------------------------------------------------------------------
+# Supported timeframes and their table suffixes
+# ---------------------------------------------------------------------------
+TIMEFRAMES = ("15m", "1h", "4h", "1d")
 
-    __tablename__ = "candles_15m"
+# Map interval string to Binance kline interval
+BINANCE_INTERVALS = {
+    "15m": "15m",
+    "1h": "1h",
+    "4h": "4h",
+    "1d": "1d",
+}
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    pair = Column(String(20), nullable=False)
-    timestamp = Column(DateTime(timezone=True), nullable=False)
-    open = Column(Float, nullable=False)
-    high = Column(Float, nullable=False)
-    low = Column(Float, nullable=False)
-    close = Column(Float, nullable=False)
-    volume = Column(Float, nullable=False)
-    quote_volume = Column(Float)
-    trades_count = Column(Integer)
-
-    __table_args__ = (UniqueConstraint("pair", "timestamp", name="uq_candle_pair_ts"),)
+# Lookback bars for indicator warmup per timeframe
+INDICATOR_LOOKBACK = {
+    "15m": 500,
+    "1h": 500,
+    "4h": 500,
+    "1d": 500,
+}
 
 
+def _candle_table_name(tf: str) -> str:
+    return f"candles_{tf}"
+
+
+def _indicators_table_name(tf: str) -> str:
+    return f"btc_indicators_{tf}"
+
+
+def _live_state_table_name(tf: str) -> str:
+    return f"btc_live_state_{tf}"
+
+
+# ---------------------------------------------------------------------------
+# Candle models — one table per timeframe
+# ---------------------------------------------------------------------------
+def _make_candle_model(tf: str):
+    table_name = _candle_table_name(tf)
+    uq_name = f"uq_candle_{tf}_pair_ts"
+
+    # Use type() to create unique class names that SQLAlchemy won't warn about
+    attrs = {
+        "__tablename__": table_name,
+        "__table_args__": (UniqueConstraint("pair", "timestamp", name=uq_name),),
+        "id": Column(Integer, primary_key=True, autoincrement=True),
+        "pair": Column(String(20), nullable=False),
+        "timestamp": Column(DateTime(timezone=True), nullable=False),
+        "open": Column(Float, nullable=False),
+        "high": Column(Float, nullable=False),
+        "low": Column(Float, nullable=False),
+        "close": Column(Float, nullable=False),
+        "volume": Column(Float, nullable=False),
+        "quote_volume": Column(Float),
+        "trades_count": Column(Integer),
+    }
+    return type(f"Candle_{tf}", (Base,), attrs)
+
+
+def _make_indicators_model(tf: str):
+    table_name = _indicators_table_name(tf)
+    uq_name = f"uq_indicators_{tf}_pair_ts"
+
+    attrs = {
+        "__tablename__": table_name,
+        "__table_args__": (UniqueConstraint("pair", "timestamp", name=uq_name),),
+        "id": Column(Integer, primary_key=True, autoincrement=True),
+        "pair": Column(String(20), nullable=False),
+        "timestamp": Column(DateTime(timezone=True), nullable=False),
+        "open": Column(Float),
+        "high": Column(Float),
+        "low": Column(Float),
+        "close": Column(Float),
+        "volume": Column(Float),
+        "indicators": Column(JSONB),
+        "signal_type": Column(String(10)),
+        "signal_score": Column(Float),
+        "signal_confidence": Column(Float),
+    }
+    return type(f"BtcIndicators_{tf}", (Base,), attrs)
+
+
+def _make_live_state_model(tf: str):
+    table_name = _live_state_table_name(tf)
+
+    attrs = {
+        "__tablename__": table_name,
+        "id": Column(Integer, primary_key=True, autoincrement=True),
+        "pair": Column(String(20), nullable=False, unique=True),
+        "timestamp": Column(DateTime(timezone=True), nullable=False),
+        "price": Column(Float, nullable=False),
+        "signal_type": Column(String(10)),
+        "signal_score": Column(Float),
+        "signal_confidence": Column(Float),
+        "indicators": Column(JSONB),
+        "strategy_signals": Column(JSONB),
+        "model_name": Column(String(100)),
+        "model_fitness": Column(Float),
+        "updated_at": Column(DateTime(timezone=True), default=datetime.now, onupdate=datetime.now),
+    }
+    return type(f"BtcLiveState_{tf}", (Base,), attrs)
+
+
+# Build model registries
+CANDLE_MODELS: dict[str, type] = {}
+INDICATOR_MODELS: dict[str, type] = {}
+LIVE_STATE_MODELS: dict[str, type] = {}
+
+for _tf in TIMEFRAMES:
+    CANDLE_MODELS[_tf] = _make_candle_model(_tf)
+    INDICATOR_MODELS[_tf] = _make_indicators_model(_tf)
+    LIVE_STATE_MODELS[_tf] = _make_live_state_model(_tf)
+
+# Convenience aliases for backward compatibility
+Candle15m = CANDLE_MODELS["15m"]
+BtcIndicators15m = INDICATOR_MODELS["15m"]
+BtcLiveState = LIVE_STATE_MODELS["15m"]
+
+
+# ---------------------------------------------------------------------------
+# Non-timeframe tables (unchanged)
+# ---------------------------------------------------------------------------
 class FundingRate(Base):
     """Historical funding rates."""
 
@@ -72,6 +175,37 @@ class GATrainingProgress(Base):
     created_at = Column(DateTime(timezone=True), default=datetime.now)
 
     __table_args__ = (UniqueConstraint("run_id", "generation", name="uq_ga_run_gen"),)
+
+
+class WalkForwardProgress(Base):
+    """Walk-forward window-level progress tracking."""
+
+    __tablename__ = "walk_forward_progress"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    run_id = Column(String(50), nullable=False)
+    total_windows = Column(Integer, nullable=False)
+    current_window = Column(Integer, nullable=False)
+    status = Column(String(20), nullable=False, default="training")
+    train_start = Column(String(30))
+    train_end = Column(String(30))
+    test_start = Column(String(30))
+    test_end = Column(String(30))
+    train_fitness = Column(Float)
+    oos_sharpe = Column(Float)
+    oos_return = Column(Float)
+    oos_max_dd = Column(Float)
+    oos_trades = Column(Integer)
+    oos_win_rate = Column(Float)
+    oos_calmar = Column(Float)
+    generations_run = Column(Integer)
+    window_elapsed_seconds = Column(Float)
+    created_at = Column(DateTime(timezone=True), default=datetime.now)
+    updated_at = Column(DateTime(timezone=True), default=datetime.now, onupdate=datetime.now)
+
+    __table_args__ = (
+        UniqueConstraint("run_id", "current_window", name="uq_wf_run_window"),
+    )
 
 
 class Model(Base):
@@ -116,6 +250,9 @@ class TradeLog(Base):
     created_at = Column(DateTime(timezone=True), default=datetime.now)
 
 
+# ---------------------------------------------------------------------------
+# Engine / Session helpers
+# ---------------------------------------------------------------------------
 def get_engine(config: DatabaseConfig | None = None):
     """Create SQLAlchemy engine."""
     cfg = config or DatabaseConfig()

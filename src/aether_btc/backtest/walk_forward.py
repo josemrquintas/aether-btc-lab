@@ -41,6 +41,45 @@ class WalkForwardResult:
     out_of_sample_consistency: float
 
 
+def generate_walk_forward_windows(
+    candles: pd.DataFrame,
+    train_days: int = 180,
+    test_days: int = 60,
+) -> list[WalkForwardWindow]:
+    """Split candle data into rolling train/test windows.
+
+    Standalone function usable without a WalkForwardRunner instance.
+    Windows advance by test_days each iteration with no test overlap.
+    """
+    windows: list[WalkForwardWindow] = []
+    total_start = candles.index[0]
+    total_end = candles.index[-1]
+
+    current = total_start
+    while True:
+        train_start = current
+        train_end = train_start + timedelta(days=train_days)
+        test_start = train_end + timedelta(minutes=15)  # Next bar
+        test_end = test_start + timedelta(days=test_days)
+
+        if test_end > total_end:
+            test_end = total_end
+            if test_start >= total_end:
+                break
+
+        windows.append(WalkForwardWindow(
+            train_start=train_start,
+            train_end=train_end,
+            test_start=test_start,
+            test_end=test_end,
+        ))
+
+        current = test_start
+
+    log.info("walk_forward_windows", count=len(windows))
+    return windows
+
+
 class WalkForwardRunner:
     """Runs walk-forward validation with 6-month train / 2-month test windows."""
 
@@ -60,33 +99,7 @@ class WalkForwardRunner:
 
     def generate_windows(self, candles: pd.DataFrame) -> list[WalkForwardWindow]:
         """Split candle data into rolling train/test windows."""
-        windows: list[WalkForwardWindow] = []
-        total_start = candles.index[0]
-        total_end = candles.index[-1]
-
-        current = total_start
-        while True:
-            train_start = current
-            train_end = train_start + timedelta(days=self.train_days)
-            test_start = train_end + timedelta(minutes=15)  # Next bar
-            test_end = test_start + timedelta(days=self.test_days)
-
-            if test_end > total_end:
-                test_end = total_end
-                if test_start >= total_end:
-                    break
-
-            windows.append(WalkForwardWindow(
-                train_start=train_start,
-                train_end=train_end,
-                test_start=test_start,
-                test_end=test_end,
-            ))
-
-            current = test_start
-
-        log.info("walk_forward_windows", count=len(windows))
-        return windows
+        return generate_walk_forward_windows(candles, self.train_days, self.test_days)
 
     def run(
         self,

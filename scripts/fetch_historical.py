@@ -48,7 +48,7 @@ def main() -> None:
         log.info("funding_rates_complete", count=count)
 
     # Summary
-    total_candles = pipeline.get_candle_count(args.pair)
+    total_candles = pipeline.get_candle_count(args.pair, interval=args.interval)
     total_funding = pipeline.get_funding_rate_count(args.pair)
     log.info("fetch_complete", total_candles=total_candles, total_funding=total_funding)
 

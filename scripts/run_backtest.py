@@ -17,6 +17,7 @@ from aether_btc.data.database import Model, get_session, init_db
 from aether_btc.data.pipeline import DataPipeline
 from aether_btc.ga.chromosome import Chromosome
 from aether_btc.ga.fitness import generate_signal_with_exits
+from aether_btc.signals import STRATEGIES, StrategyRunner
 from aether_btc.signals.indicators import Indicators
 
 load_dotenv()
@@ -60,6 +61,10 @@ def main() -> None:
         return
 
     candles = Indicators.add_all(candles, funding_rates=funding)
+
+    # Precompute strategy signals
+    strategy_runner = StrategyRunner(STRATEGIES)
+    candles = strategy_runner.precompute_all_bars(candles)
 
     # Run backtest
     config = BacktestConfig(initial_capital=args.capital)

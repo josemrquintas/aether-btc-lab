@@ -67,6 +67,49 @@ class BinanceDataClient:
         log.info("klines_fetched", pair=pair, count=len(df))
         return df
 
+    def fetch_recent_klines(
+        self,
+        pair: str = "BTCUSDT",
+        interval: str = "15m",
+        limit: int = 10,
+    ) -> pd.DataFrame:
+        """Fetch the most recent N klines without full historical pagination.
+
+        Uses client.get_klines(limit=N) — ideal for the refresh pipeline
+        where we only need the latest candle(s).
+
+        Returns DataFrame with columns:
+        timestamp, open, high, low, close, volume, quote_volume, trades_count
+        """
+        log.info("fetching_recent_klines", pair=pair, interval=interval, limit=limit)
+
+        klines = self.client.get_klines(
+            symbol=pair,
+            interval=interval,
+            limit=limit,
+        )
+
+        if not klines:
+            log.warning("no_recent_klines_returned", pair=pair)
+            return pd.DataFrame()
+
+        df = pd.DataFrame(klines, columns=[
+            "open_time", "open", "high", "low", "close", "volume",
+            "close_time", "quote_volume", "trades_count",
+            "taker_buy_volume", "taker_buy_quote_volume", "ignore",
+        ])
+
+        df["timestamp"] = pd.to_datetime(df["open_time"], unit="ms", utc=True)
+        df = df[["timestamp", "open", "high", "low", "close", "volume",
+                  "quote_volume", "trades_count"]].copy()
+
+        for col in ["open", "high", "low", "close", "volume", "quote_volume"]:
+            df[col] = df[col].astype(float)
+        df["trades_count"] = df["trades_count"].astype(int)
+
+        log.info("recent_klines_fetched", pair=pair, count=len(df))
+        return df
+
     def fetch_funding_rates(
         self,
         pair: str = "BTCUSDT",
